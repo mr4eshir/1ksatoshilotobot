@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
+Schema = mongoose.Schema;
 
-const messagesSchema = mongoose.Schema({
+const messagesSchema = new Schema({
     tlgid: Number,
-    user: Object,
+    user: [{ type: Schema.Types.ObjectId, ref: 'Users' }],
     text: String
 });
 
