@@ -15,7 +15,7 @@ bot.onText(/\/start/, (msg, match) => {
     const opts = {
         reply_to_message_id: msg.message_id,
         reply_markup: JSON.stringify({
-            keyboard: [['😁price', 'height', 'width']]
+            keyboard: [['test'],['😁price', 'height', 'width'], ['hello', 'world']]
         }),
         resize_keyboard: true
     };
