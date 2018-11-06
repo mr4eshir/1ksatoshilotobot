@@ -1,9 +1,13 @@
 const TelegramBot = require('node-telegram-bot-api') 
 const config = require('./config')
 const mongoose = require('mongoose');
+var MongoClient = require('mongodb').MongoClient;
 
 const Users = require("./models/users");
 const Messages = require("./models/messages")
+const RandomNumber = require("./methods/randomNumber")
+const Ticket = require("./models/ticket")
+var sha256 = require('js-sha256').sha256;
 
 const DATABASE_CONECTION = 'mongodb://localhost/bots'
 mongoose.connect(DATABASE_CONECTION);
@@ -11,44 +15,79 @@ mongoose.connect(DATABASE_CONECTION);
 const TOKEN = config.token
 const bot = new TelegramBot(TOKEN, { polling:true })
 
+var hash = sha256.create();
+hash.update('Message to hash');
+hash.hex();
+
 bot.onText(/\/start/, (msg, match) => {
     const opts = {
         reply_to_message_id: msg.message_id,
         reply_markup: JSON.stringify({
-            keyboard: [['test'],['😁price', 'height', 'width'], ['hello', 'world']]
+            keyboard: [['Купить_билет', 'Мои_билеты'],['price', 'height', 'width']]
         }),
         resize_keyboard: true
     };
     bot.sendMessage(msg.chat.id, 'Hi. I am a simple bot. Have fun!', opts);
 });
 
-bot.onText(/price/, (msg, match) => {
+bot.onText(/Купить_билет/, (msg, match) => {
     const opts = {
         reply_markup: {
             inline_keyboard: [
                 [{
-                        text: 'EUR',
+                        text: '111',
                         callback_data: JSON.stringify({
-                            'command': 'price',
-                            'base': 'EUR'
+                            'command': 'Купить_билет',
+                            'base': '111'
                         })
                     },
                     {
-                        text: 'USD',
+                        text: '222',
                         callback_data: JSON.stringify({
-                            'command': 'price',
-                            'base': 'USD'
+                            'command': 'Купить_билет',
+                            'base': '222'
                         })
-                    }
+                    },
                 ]
             ]
         }
     };
-    bot.sendMessage(msg.chat.id, 'Choose currency', opts);
+    // var hash = sha256(RandomNumber())
+    bot.sendMessage(msg.chat.id, RandomNumber(), opts);
+});
+
+bot.onText(/Мои_билеты/, (msg, match) => {
+    MongoClient.connect('mongodb://localhost/bots', function(err, db) {
+        if (err) throw err;
+        var dbo = db.db("bots");
+        dbo.collection("tickets").find({}).toArray(function(err, result) {
+          if (err) throw err;
+        var tickets = result.reduce(function (msg, ticket) { 
+            return ticket.numbers + "\n";
+        }, '');
+        db.close();
+        const opts = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{
+                        text: '333',
+                        callback_data: JSON.stringify({
+                            'command': 'Мои_билеты',
+                            'base': '333'
+                        })
+                    }]
+                ]
+            }
+        };
+        // console.log(tickets)
+        bot.sendMessage(msg.chat.id, tickets, opts);
+        });
+    });
 });
 
 bot.on('message', msg => {
-    console.log( msg)
+    // console.log( msg)
+    // console.log(typeof RandomNumber())
     const addUser = new Users({
         tlgid: msg.from.id,
         first_name: msg.from.first_name,
@@ -58,8 +97,13 @@ bot.on('message', msg => {
         tlgid: msg.chat.id,
         user: addUser._id,
         text: msg.text,
+    });
+    const ticket = new Ticket({
+        user: addUser._id,
+        hash: sha256(RandomNumber()),
+        numbers: RandomNumber()
     })
     const { chat: { id }} = msg
-    bot.sendMessage(id, 'Pong')
-    return Promise.all([addUser.save(), messages.save()])
+    bot.sendMessage(id, 'Hello')
+    return Promise.all([addUser.save(), messages.save(), ticket.save()])
 })
