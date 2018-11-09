@@ -6,6 +6,7 @@ var MongoClient = require('mongodb').MongoClient;
 const Users = require("./models/users");
 const Messages = require("./models/messages")
 const RandomNumber = require("./methods/randomNumber")
+const Start = require("./commands/start")
 const Ticket = require("./models/ticket")
 var sha256 = require('js-sha256').sha256;
 
@@ -19,16 +20,7 @@ var hash = sha256.create();
 hash.update('Message to hash');
 hash.hex();
 
-bot.onText(/\/start/, (msg, match) => {
-    const opts = {
-        reply_to_message_id: msg.message_id,
-        reply_markup: JSON.stringify({
-            keyboard: [['Купить_билет', 'Мои_билеты'],['price', 'height', 'width']]
-        }),
-        resize_keyboard: true
-    };
-    bot.sendMessage(msg.chat.id, 'Hi. I am a simple bot. Have fun!', opts);
-});
+Start
 
 bot.onText(/Купить_билет/, (msg, match) => {
     const opts = {

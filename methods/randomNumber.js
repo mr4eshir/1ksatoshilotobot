@@ -13,5 +13,5 @@ function randomNumber() {
     }
     return arr.shuffle().slice(n-30).join();
 }
-    
+
 module.exports = randomNumber;
