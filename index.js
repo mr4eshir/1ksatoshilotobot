@@ -6,7 +6,6 @@ var MongoClient = require('mongodb').MongoClient;
 const Users = require("./models/users");
 const Messages = require("./models/messages")
 const RandomNumber = require("./methods/randomNumber")
-const Start = require("./commands/start")
 const Ticket = require("./models/ticket")
 var sha256 = require('js-sha256').sha256;
 
@@ -20,7 +19,16 @@ var hash = sha256.create();
 hash.update('Message to hash');
 hash.hex();
 
-Start
+bot.onText(/\/start/, (msg, match) => {
+    const opts = {
+        reply_to_message_id: msg.message_id,
+        reply_markup: JSON.stringify({
+            keyboard: [['Купить_билет'],['Мои_билеты']]
+        }),
+        resize_keyboard: true
+    };
+    bot.sendMessage(msg.chat.id, 'Hi. I am a simple bot. Have fun!', opts);
+});
 
 bot.onText(/Купить_билет/, (msg, match) => {
     const opts = {
@@ -49,12 +57,19 @@ bot.onText(/Купить_билет/, (msg, match) => {
 });
 
 bot.onText(/Мои_билеты/, (msg, match) => {
-    MongoClient.connect('mongodb://localhost/bots', function(err, db) {
+    MongoClient.connect('mongodb://localhost/bots', (err, db) => {
         if (err) throw err;
         var dbo = db.db("bots");
-        dbo.collection("tickets").find({}).toArray(function(err, result) {
-          if (err) throw err;
-        var tickets = result.reduce(function (msg, ticket) { 
+        dbo.collection("tickets").find({}).toArray((err, result) => {
+        if (err) throw err;
+        // Ticket
+        // .find()
+        // .populate('user')
+        // .exec((err, story) => {
+        // if (err) return handleError(err);
+        // console.log(story)
+        // });
+        var tickets = result.reduce((msg, ticket) => { 
             return ticket.numbers + "\n";
         }, '');
         db.close();
@@ -71,14 +86,15 @@ bot.onText(/Мои_билеты/, (msg, match) => {
                 ]
             }
         };
-        // console.log(tickets)
         bot.sendMessage(msg.chat.id, tickets, opts);
         });
     });
 });
 
+
 bot.on('message', msg => {
-    // console.log( msg)
+    // console.log('================================')
+    // console.log( msg.from.id)
     // console.log(typeof RandomNumber())
     const addUser = new Users({
         tlgid: msg.from.id,
@@ -91,11 +107,11 @@ bot.on('message', msg => {
         text: msg.text,
     });
     const ticket = new Ticket({
-        user: addUser._id,
+        user: addUser,
         hash: sha256(RandomNumber()),
         numbers: RandomNumber()
     })
     const { chat: { id }} = msg
-    bot.sendMessage(id, 'Hello')
+    // bot.sendMessage(id, 'Hello')
     return Promise.all([addUser.save(), messages.save(), ticket.save()])
 })

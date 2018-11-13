@@ -1,4 +1,4 @@
-function randomNumber() {
+randomNumber = () => {
     var arr = [];
     var n = 90;
     for (var i = 1; i <= n; i++) {
