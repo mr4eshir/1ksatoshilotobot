@@ -7,14 +7,6 @@ const usersSchema = new Schema({
     last_name: String,
 });
 
-let User = mongoose.model('Users', usersSchema);
+let Users = mongoose.model('Users', usersSchema);
 
-User.save = function () {
-    let user = this.findOne('tlgid = ' . tlgid).exec();
-    if (user) {
-        return user;
-    }
-    return this.prototype.save();
-}
-
-module.exports = User;
+module.exports = Users;

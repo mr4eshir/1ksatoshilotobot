@@ -21,6 +21,13 @@ var hash = sha256.create();
 hash.update('Message to hash');
 hash.hex();
 
+let dbo = ''; // Mongo connection
+
+MongoClient.connect('mongodb://localhost/bots', (err, db) => {
+    if (err) throw err;
+    dbo = db.db("bots");
+});
+
 bot.onText(/\/start/, (msg, match) => {
     const opts = {
         reply_to_message_id: msg.message_id,
@@ -32,100 +39,94 @@ bot.onText(/\/start/, (msg, match) => {
     bot.sendMessage(msg.chat.id, 'Hi. I am a simple bot. Have fun!', opts);
 });
 
-bot.onText(/Купить_билет/, (msg, match) => {
-    const opts = {
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                        text: '111',
-                        callback_data: JSON.stringify({
-                            'command': 'Купить_билет',
-                            'base': '111'
-                        })
-                    },
-                    {
-                        text: '222',
-                        callback_data: JSON.stringify({
-                            'command': 'Купить_билет',
-                            'base': '222'
-                        })
-                    },
-                ]
-            ]
-        }
-    };
-    // var hash = sha256(RandomNumber())
-    bot.sendMessage(msg.chat.id, RandomNumber(), opts);
-});
+// bot.onText(/Купить_билет/, (msg, match) => {
+//     const opts = {
+//         reply_markup: {
+//             inline_keyboard: [
+//                 [{
+//                         text: '111',
+//                         callback_data: JSON.stringify({
+//                             'command': 'Купить_билет',
+//                             'base': '111'
+//                         })
+//                     },
+//                     {
+//                         text: '222',
+//                         callback_data: JSON.stringify({
+//                             'command': 'Купить_билет',
+//                             'base': '222'
+//                         })
+//                     },
+//                 ]
+//             ]
+//         }
+//     };
+//     // var hash = sha256(RandomNumber())
+//     bot.sendMessage(msg.chat.id, RandomNumber(), opts);
+// });
 
-var test = exports.orders_get_all = (req, res, next) => {
-    Ticket.find()
-      .select("tickets user")
-      .populate("user")
-      .exec()
-      .then (i => {
-        i.map(user => {
-            return user.user.map(x => {
-                return x.tlgid
-            })
-        })
-    })
-};
+// var test = exports.orders_get_all = (req, res, next) => {
+//     Ticket.find()
+//       .select("tickets user")
+//       .populate("user")
+//       .exec()
+//       .then (i => {
+//         i.map(user => {
+//             return user.user.map(x => {
+//                 return x.tlgid
+//             })
+//         })
+//     })
+// };
 
 
 
-bot.onText(/Мои_билеты/, (msg, match) => {
-    MongoClient.connect('mongodb://localhost/bots', (err, db) => {
-        if (err) throw err;
-        var dbo = db.db("bots");
-        dbo.collection("tickets").find({}).toArray((err, result) => {
-        if (err) throw err;
-        var tickets = result.reduce((msg, ticket) => { 
-            return ticket.numbers + "\n";
-        }, '');
-        db.close();
-        const opts = {
-            reply_markup: {
-                inline_keyboard: [
-                    [{
-                        text: '333',
-                        callback_data: JSON.stringify({
-                            'command': 'Мои_билеты',
-                            'base': '333'
-                        })
-                    }]
-                ]
-            }
-        };
-        bot.sendMessage(msg.chat.id, tickets, opts);
-        });
-    });
-});
+// bot.onText(/Мои_билеты/, (msg, match) => {
+//         const opts = {
+//             reply_markup: {
+//                 inline_keyboard: [
+//                     [{
+//                         text: '333',
+//                         callback_data: JSON.stringify({
+//                             'command': 'Мои_билеты',
+//                             'base': '333'
+//                         })
+//                     }]
+//                 ]
+//             }
+//         };
+//         bot.sendMessage(msg.chat.id, tickets, opts);
+//         });
+//     });
+// });
 
 
 bot.on('message',  async msg => {
-    const test = await getTicketIds()
-    console.log('===')
-    console.log(test)
-    console.log('===')
-    console.log(msg.from.id)
-    // console.log(typeof RandomNumber())
-    const addUser = new Users({
-        tlgid: msg.from.id,
-        first_name: msg.from.first_name,
-        last_name: msg.from.last_name
+    const user = await Users.findOne({'tlgid': msg.from.id}).exec().then((user) => {
+        console.log('index 1 user: ', user);
+        if (user) return user;
+        let new_user = new Users({
+            tlgid: msg.from.id,
+            first_name: msg.from.first_name,
+            last_name: msg.from.last_name
+        });
+        return Users.findOneAndUpdate({'tlgid': msg.from.id}, new_user, {
+            'new': true,
+            'upsert': true
+        }).exec().then((user)=>user);
     });
+
+    console.log('index 2 user: ', user);
+    // bot.sendMessage(msg.chat.id, user.tlgid, {});
     const messages = new Messages({
         tlgid: msg.chat.id,
-        user: addUser._id,
+        user: user,
         text: msg.text,
     });
     const ticket = new Ticket({
-        user: addUser,
+        user: user,
         hash: sha256(RandomNumber()),
         numbers: RandomNumber()
     })
-    const { chat: { id }} = msg
-    // bot.sendMessage(id, 'Hello')
-    return Promise.all([addUser.save(), messages.save(), ticket.save()])
+    return Promise.all([messages.save(), ticket.save()]);
 })
