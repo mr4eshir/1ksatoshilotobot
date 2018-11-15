@@ -9,6 +9,8 @@ const RandomNumber = require("./methods/randomNumber")
 const Ticket = require("./models/ticket")
 var sha256 = require('js-sha256').sha256;
 
+const getTicketIds  = require("./methods/getTicketIds")
+
 const DATABASE_CONECTION = 'mongodb://localhost/bots'
 mongoose.connect(DATABASE_CONECTION);
 
@@ -56,19 +58,28 @@ bot.onText(/Купить_билет/, (msg, match) => {
     bot.sendMessage(msg.chat.id, RandomNumber(), opts);
 });
 
+var test = exports.orders_get_all = (req, res, next) => {
+    Ticket.find()
+      .select("tickets user")
+      .populate("user")
+      .exec()
+      .then (i => {
+        i.map(user => {
+            return user.user.map(x => {
+                return x.tlgid
+            })
+        })
+    })
+};
+
+
+
 bot.onText(/Мои_билеты/, (msg, match) => {
     MongoClient.connect('mongodb://localhost/bots', (err, db) => {
         if (err) throw err;
         var dbo = db.db("bots");
         dbo.collection("tickets").find({}).toArray((err, result) => {
         if (err) throw err;
-        // Ticket
-        // .find()
-        // .populate('user')
-        // .exec((err, story) => {
-        // if (err) return handleError(err);
-        // console.log(story)
-        // });
         var tickets = result.reduce((msg, ticket) => { 
             return ticket.numbers + "\n";
         }, '');
@@ -92,9 +103,12 @@ bot.onText(/Мои_билеты/, (msg, match) => {
 });
 
 
-bot.on('message', msg => {
-    // console.log('================================')
-    // console.log( msg.from.id)
+bot.on('message',  async msg => {
+    const test = await getTicketIds()
+    console.log('===')
+    console.log(test)
+    console.log('===')
+    console.log(msg.from.id)
     // console.log(typeof RandomNumber())
     const addUser = new Users({
         tlgid: msg.from.id,
